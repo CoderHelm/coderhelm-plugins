@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../../tools/plugin-manifest.v1.json
+#
+# Release notes for people, from the pull requests a release merged.
+# Read only: it saves drafts in CoderHelm and changes nothing anywhere else.
+name: release-notes
+version: 1.0.0
+description: On each new release tag, drafts release notes from the merged pull requests, for a person to review and approve.
+
+skills: [skills/*/SKILL.md]
+agents: [agents/*.md]
+
+settings:
+  - key: audience
+    type: string
+    description: Who reads your release notes, in a sentence ("developers who call our API", "people who use the web app").
+  - key: product_name
+    type: string
+    description: The product's name as the notes should spell it.
+  - key: hidden_labels
+    type: string
+    description: Pull request labels to leave out of the notes, comma separated (for example "chore, internal, dependencies").
+
+tools:
+  # GitHub's remote MCP server, added on the Connections page by its address
+  # and named "GitHub MCP" (so its id is github-mcp). Only reads.
+  - ref: "mcp:github-mcp"
+    allow: [get_*, list_*, search_*]
+    description: Read pull requests, commits, tags and releases.
+
+triggers:
+  # A new tag on a repository with release notes turned on in CoderHelm.
+  # The run gets the repository, the tag and CoderHelm's own notes.
+  - on: github.release
+    agent: release-writer
+  # Ask for notes by hand, for any range of tags.
+  - on: manual
+    agent: release-writer
+    form:
+      repo: text
+      from_tag: text
+      to_tag: text
+      audience: [customers, engineers, both]
+
+outputs:
+  - type: draft
+    kinds: [post, page, note]
+
+budget:
+  monthly_tokens: 1000000

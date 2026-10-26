@@ -1,0 +1,128 @@
+# yaml-language-server: $schema=../../tools/plugin-manifest.v1.json
+#
+# STARTER: a minimal plugin with every manifest field explained.
+#
+# Copy this folder to plugins/<your-plugin>/ in your own repository, rename
+# it, and edit. Lines starting with "#| " are optional fields: delete the
+# "#| " to turn one on. CI in this repository turns them all on and checks
+# that result too, so every example here is valid.
+#
+# Unknown fields are refused. The full list, with allowed values, is in
+# AGENTS.md at the repository root and at
+# https://docs.coderhelm.com/plugins/manifest-reference
+
+# name (required): lowercase letters, digits, "-" and "_", at most 40.
+# It is the plugin's id in the catalog.
+name: starter
+
+# namespace (optional): your publisher name. The id becomes
+# "<namespace>-<name>", so two sources can each have a "starter".
+#| namespace: example-org
+
+# version (required): "1.2" or "1.2.0". A label for people: installs are
+# pinned by content, so raise it whenever you publish a change.
+version: 0.1.0
+
+# description: one or two sentences, at most 500 characters. Shown in the
+# catalog.
+description: A minimal starting point. Turns a brief into a short written note, using the team's house style.
+
+# skills, agents, commands: relative globs ending in .md. These are the
+# defaults for skills and agents; commands has no default.
+skills: [skills/*/SKILL.md]
+agents: [agents/*.md]
+commands: [commands/*.md]
+
+# settings: values each team fills in on the plugin's page. At most 30.
+#   type: string      a value the team types; agents can read it
+#   type: secret      pasted once, sealed, never given to a model
+#   type: connection  an account; needs provider: oauth2, mcp or key
+# sensitive: true keeps any setting out of prompts and the dashboard.
+settings:
+  - key: house_style
+    type: string
+    description: A link to your writing guide, or a few sentences on how you write.
+#|   - key: notes_api
+#|     type: connection
+#|     provider: key
+#|     sensitive: true
+#|     description: The API key of the notes service approved notes are sent to.
+#|   - key: notes_folder
+#|     type: string
+#|     description: The folder approved notes go to.
+
+# tools: every tool the agents may call. A tool that isn't listed doesn't
+# exist for a run. Every run also has read_plugin_skill and save_draft.
+# At most 40. Three shapes:
+#   ref: "mcp:<server>"  tools from a server on the Connections page; allow
+#                        lists names or narrow patterns, never "*"
+#   kind: http           one HTTPS call with a connection setting's token
+#   kind: builtin        one of CoderHelm's read-only tools; plugin runs
+#                        offer search_knowledge
+# risk: read, write or consequential. It can raise what CoderHelm works out
+# from the name and method, never lower it. Consequential tools run only
+# after a person approves the exact version.
+tools:
+  - name: search_knowledge
+    kind: builtin
+    description: Search the knowledge bases attached to this plugin.
+#|   - ref: "mcp:wiki"
+#|     allow: [get_page, search_pages]
+#|     description: Read pages from a wiki server on your Connections page.
+#|   - name: send_note
+#|     kind: http
+#|     connection: notes_api
+#|     method: POST
+#|     url: "https://api.example.com/v1/notes"
+#|     risk: consequential
+#|     description: Send an approved note to the notes service.
+#|     headers:
+#|       Accept: application/json
+#|     body:
+#|       folder: "{{setting:notes_folder}}"
+#|       title: "{{title}}"
+#|       text: "{{content}}"
+
+# triggers: what starts a run. At most 10. Three kinds:
+#   on: manual          a brief form; each field is "text" or a list of choices
+#   on: schedule        cron, five fields, UTC
+#   on: github.release  a new release tag; repos limits it (owner/name)
+# agent: the agent file's name (without .md) that answers; the first agent
+# when unset.
+triggers:
+  - on: manual
+    agent: note-writer
+    form:
+      brief: text
+      length: [short, long]
+#|   - on: schedule
+#|     cron: "0 14 * * MON"
+#|     agent: note-writer
+#|   - on: github.release
+#|     repos: [example-org/example-repo]
+#|     agent: note-writer
+
+# outputs: what a run produces.
+#   type: draft    kinds: blog, social, email, image, post, page, note,
+#                  reply, ticket, report (any of them when unset)
+#   type: publish  via: a consequential tool from tools; approval.min is at
+#                  least 1, and role is a label for the approvers
+outputs:
+  - type: draft
+    kinds: [note]
+#|   - type: publish
+#|     via: send_note
+#|     approval: {role: editor, min: 1}
+
+# results (optional): read a published item's numbers back after a while,
+# through an mcp: server listed in tools, with a read-only tool. after_days
+# is 1 to 90.
+#| results:
+#|   via: "mcp:wiki"
+#|   tool: get_page
+#|   after_days: 7
+
+# budget: the plugin's monthly token limit, as a starting value the team
+# can change. 0 means no limit of its own.
+budget:
+  monthly_tokens: 200000

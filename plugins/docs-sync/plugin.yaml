@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../../tools/plugin-manifest.v1.json
+#
+# Proposes documentation updates where merged code changed behavior.
+# Read only: proposals are drafts in CoderHelm for a person to review.
+name: docs-sync
+version: 1.0.0
+description: After each release, finds merged pull requests that changed behavior and drafts the documentation updates they need, for a person to review.
+
+skills: [skills/*/SKILL.md]
+agents: [agents/*.md]
+
+settings:
+  - key: docs_repo
+    type: string
+    description: The repository your docs live in, as owner/name. Leave empty when docs live next to the code.
+  - key: docs_paths
+    type: string
+    description: Where docs live in that repository, comma separated (docs/, README.md).
+  - key: style_guide
+    type: string
+    description: A link to your docs style guide, or a few sentences on how your docs read.
+
+tools:
+  # GitHub's remote MCP server, named "GitHub MCP" on the Connections page.
+  # Only reads: pull requests, diffs and doc files.
+  - ref: "mcp:github-mcp"
+    allow: [get_*, list_*, search_*]
+    description: Read merged pull requests, their changed files, and the docs.
+
+triggers:
+  # Each new release tag: check what that release merged.
+  - on: github.release
+    agent: docs-checker
+  # Check specific pull requests now.
+  - on: manual
+    agent: docs-checker
+    form:
+      repo: text
+      pull_requests: text
+
+outputs:
+  - type: draft
+    kinds: [page, note]
+
+budget:
+  monthly_tokens: 1000000

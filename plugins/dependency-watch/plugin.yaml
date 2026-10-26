@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=../../tools/plugin-manifest.v1.json
+#
+# A weekly look at outdated and vulnerable dependencies, as one grouped
+# issue. Reads only; the issue is opened after a person approves it.
+name: dependency-watch
+version: 1.0.0
+description: Every week, checks your repositories for vulnerable and outdated dependencies and drafts one grouped issue, opened only after a person approves it.
+
+skills: [skills/*/SKILL.md]
+agents: [agents/*.md]
+
+settings:
+  - key: repos
+    type: string
+    description: The repositories to check, as owner/name, comma separated (example-org/web, example-org/api).
+  - key: issue_repo
+    type: string
+    description: The repository the grouped issue is opened in, as owner/name.
+  - key: ignore
+    type: string
+    description: Packages to leave out, comma separated, with a reason each (left-pad, pinned on purpose).
+
+tools:
+  # GitHub's remote MCP server, named "GitHub MCP" on the Connections page.
+  # Reads: files, Dependabot alerts, releases of upstream packages.
+  - ref: "mcp:github-mcp"
+    allow: [get_*, list_*, search_*]
+    description: Read manifests, lockfiles, Dependabot alerts and upstream releases.
+  # The one thing it can change: opening the grouped issue. Declared
+  # consequential, so the call waits for a person to approve it.
+  - ref: "mcp:github-mcp"
+    allow: [create_issue]
+    risk: consequential
+    description: Ask to open the grouped issue. It opens only after a person approves the exact title and text.
+  # Snyk (Connections page), read only, when the team has it.
+  - ref: "mcp:snyk"
+    allow: [list_*, get_*]
+    description: Read known vulnerabilities for the repositories' projects.
+
+triggers:
+  # Mondays at 13:00 UTC.
+  - on: schedule
+    cron: "0 13 * * MON"
+    agent: dependency-checker
+  # Check one repository now.
+  - on: manual
+    agent: dependency-checker
+    form:
+      repo: text
+      focus: [security only, security and outdated]
+
+outputs:
+  - type: draft
+    kinds: [ticket, report]
+
+budget:
+  monthly_tokens: 1500000

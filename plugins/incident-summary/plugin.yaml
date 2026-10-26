@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=../../tools/plugin-manifest.v1.json
+#
+# A plain-words summary of an incident, from an alert or an error the team
+# points it at. Reads monitoring; posts to chat only after a person approves.
+name: incident-summary
+version: 1.0.0
+description: Writes a plain-words incident summary from an alert or an error, and posts it to your incident channel once a person approves it.
+
+skills: [skills/*/SKILL.md]
+agents: [agents/*.md]
+
+settings:
+  - key: slack_channel
+    type: string
+    description: The channel id summaries are posted to once approved (C0123456789).
+  - key: services
+    type: string
+    description: A few lines on your main services and who uses them, so the summary can say who is affected.
+  - key: slack
+    type: connection
+    provider: oauth2
+    scopes: [chat:write]
+    sensitive: true
+    description: The Slack app the approved summary is posted as.
+
+tools:
+  # Errors (Sentry on the Connections page): read only.
+  - ref: "mcp:sentry"
+    allow: [find_*, get_*, search_*]
+    description: Read issues, events and releases.
+  # Alerts, metrics and logs (Grafana on the Connections page): read only.
+  - ref: "mcp:grafana"
+    allow: [list_*, get_*, query_*, search_*, find_*]
+    description: Read alert rules, incidents, metrics and logs.
+  # Posting the approved summary: only after a person approves the version.
+  - name: post_summary
+    kind: http
+    connection: slack
+    method: POST
+    url: "https://slack.com/api/chat.postMessage"
+    risk: consequential
+    description: Post an approved incident summary to the incident channel.
+    body:
+      channel: "{{setting:slack_channel}}"
+      text: "{{content}}"
+
+triggers:
+  # A person pastes the alert, the error link or a log line.
+  - on: manual
+    agent: incident-writer
+    form:
+      alert: text
+      service: text
+      severity: [sev1, sev2, sev3, unknown]
+      audience: [engineering, whole company, customers]
+  # Weekday mornings: summarize what fired overnight, if anything did.
+  - on: schedule
+    cron: "0 13 * * MON-FRI"
+    agent: overnight-sweep
+
+outputs:
+  - type: draft
+    kinds: [report, post]
+  - type: publish
+    via: post_summary
+    approval: {role: incident_lead, min: 1}
+
+budget:
+  monthly_tokens: 1500000

@@ -1,0 +1,50 @@
+name: Validate plugins
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays: catch a new schema or validator on docs.coderhelm.com.
+    - cron: "0 12 * * MON"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  plugins:
+    name: Every plugin passes CoderHelm's checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      # Schema (tools/plugin-manifest.v1.json), the CoderHelm validator
+      # (tools/validate-plugin.mjs), the platform checks the validator
+      # doesn't make, the layout, and each starter's optional lines.
+      - run: npm run check
+
+  vendored-tools:
+    name: tools/ matches docs.coderhelm.com
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      # The vendored schema must equal the published one and the docs
+      # repository's copy; the vendored validator must equal the published
+      # one. When this fails, run `npm run refresh-tools` and commit tools/.
+      - run: npm run check:drift
