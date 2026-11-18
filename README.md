@@ -126,6 +126,8 @@ README, and examples stay generic: no company or customer names, no real
 accounts, `example.com` for addresses. Report a way around a plugin's
 safety rules to security@coderhelm.com rather than in an issue.
 
+Questions and support: [support@coderhelm.com](mailto:support@coderhelm.com).
+
 ## License
 
 [MIT](LICENSE). Copy, change and ship these examples in your own
